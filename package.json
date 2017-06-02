@@ -1,0 +1,13 @@
+{
+  "name": "layaastar",
+  "version": "1.0.0",
+  "description": "用法\r ```\r pbrtools convhdr in.hdr out.png|out.raw\r ```",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "node-gyp rebuild"
+  },
+  "author": "",
+  "license": "ISC",
+  "gypfile": true
+}
