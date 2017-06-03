@@ -6,12 +6,83 @@
 #include <unordered_map>
 #include <functional>
 
-
 //不可行区域
 #define BLOCKV 0
 
 //可行区域
 #define VALIDV 1
+
+using v8::Context;
+using v8::Function;
+using v8::FunctionCallbackInfo;
+using v8::FunctionTemplate;
+using v8::Isolate;
+using v8::Local;
+using v8::Number;
+using v8::Object;
+using v8::Persistent;
+using v8::String;
+using v8::Value;
+
+Persistent<Function> AStarMap::constructor;
+
+void js_findPath(const FunctionCallbackInfo<Value>& args) {
+    Isolate* isolate = args.GetIsolate();
+
+    AStarMap* obj = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
+    //obj->value_ += 1;
+
+    //设置返回值
+    //args.GetReturnValue().Set(Number::New(isolate, obj->value_));
+}
+
+void AStarMap::Init(Local<Object> exports) {
+    Isolate* isolate = exports->GetIsolate();
+
+    // Prepare constructor template
+    Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
+    tpl->SetClassName(String::NewFromUtf8(isolate, "MyObject"));
+    tpl->InstanceTemplate()->SetInternalFieldCount(1);
+
+    // Prototype
+    NODE_SET_PROTOTYPE_METHOD(tpl, "findPath", js_findPath);
+
+    constructor.Reset(isolate, tpl->GetFunction());
+    exports->Set(String::NewFromUtf8(isolate, "MyObject"), tpl->GetFunction());
+}
+
+void AStarMap::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    Isolate* isolate = args.GetIsolate();
+
+    if (args.IsConstructCall()) {
+        // Invoked as constructor: `new MyObject(...)`
+        printf("%d\n", args.Length);
+        //double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
+        const unsigned int* pMap;
+        int w;
+        int h;
+        int px;
+        int py;
+        int gw;
+        int gh;
+        AStarMap* obj = new AStarMap(pMap,w,h,px,py,gw,gh);    //TODO
+        obj->Wrap(args.This());
+        args.GetReturnValue().Set(args.This());
+    }
+    else {
+        /*
+        // Invoked as plain function `MyObject(...)`, turn into construct call.
+        const int argc = 1;
+        Local<Value> argv[argc] = { args[0] };
+        Local<Context> context = isolate->GetCurrentContext();
+        Local<Function> cons = Local<Function>::New(isolate, constructor);
+        Local<Object> result =
+            cons->NewInstance(context, argc, argv).ToLocalChecked();
+        args.GetReturnValue().Set(result);
+        */
+    }
+}
+
 
 MAPDATATYPE map[] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -78,9 +149,7 @@ MAPDATATYPE map[] = {
 
 using PQElement = std::pair<int, int>; //<prio, value>
 
-struct Vec2 {
-    int x, y;
-};
+
 
 int CoordToNode(const int nX, const int nY, const int nMapWidth){
     return nY * nMapWidth + nX;
@@ -99,6 +168,9 @@ int Heuristic(const int nFromX, const int nFromY, const int nToX, const int nToY
     return (dx*dx + dy*dy);
 }
 
+/**
+ * 去掉了起点。
+*/
 int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSize,
     int* const pOutBuffer, std::unordered_map<int, int>& CameFrom){
     std::vector<int> Path;
@@ -240,63 +312,30 @@ void test() {
 /**
 
 */
-void findPath(int stx, int sty, int edx, int edy, int maxwidth,int maxheight, int linedist) {
 
-}
-
-/*
- * http://www.cnblogs.com/pheye/archive/2010/08/14/1799803.html
-*/
-void DrawLine(int x1, int y1, int x2, int y2){
-    int dx = x2 - x1;
-    int dy = y2 - y1;
-    int ux = ((dx > 0) << 1) - 1;//x的增量方向，取或-1
-    int uy = ((dy > 0) << 1) - 1;//y的增量方向，取或-1
-    int x = x1, y = y1, eps;//eps为累加误差
-
-    eps = 0; dx = abs(dx); dy = abs(dy);
-    if (dx > dy){
-        for (x = x1; x != x2; x += ux){
-            //SetPixel(img, x, y);
-            eps += dy;
-            if ((eps << 1) >= dx){
-                y += uy; eps -= dx;
-            }
-        }
-    }
-    else{
-        for (y = y1; y != y2; y += uy){
-            //SetPixel(img, x, y);
-            eps += dx;
-            if ((eps << 1) >= dy){
-                x += ux; eps -= dy;
-            }
-        }
-    }
-}
 
 AStarMap::AStarMap(const MAPDATATYPE* pMap, const int nMapWidth, const int nMapHeight,
     int nPosX, int nPosY, int nGridWidth, int nGridHeight) {
     
-    mnWidth = nMapWidth + 2;
-    mnHeight = nMapHeight + 2;
-    mpMap = new MAPDATATYPE[mnWidth*mnHeight];
-    memset(mpMap, BLOCKV, mnWidth*sizeof(MAPDATATYPE));
-    memset(mpMap + mnWidth*(mnHeight-1), BLOCKV, mnWidth*sizeof(MAPDATATYPE));
-    MAPDATATYPE *pMapL = mpMap+mnWidth, *pMapR=mpMap+mnWidth+mnWidth-1;
-    const MAPDATATYPE *pSrcMap = pMap;
-    for (int y = 0; y < mnHeight-2; y++) {
-        *pMapL = BLOCKV;
-        memcpy(pMapL + 1, pSrcMap, nMapWidth*sizeof(MAPDATATYPE));
-        *pMapR = BLOCKV;
-        pSrcMap += nMapWidth;
-        pMapL += mnWidth;
-        pMapR += mnWidth;
+    mnWidth = nMapWidth;
+    mnHeight = nMapHeight;
+    mpMap = new unsigned int[mnWidth*mnHeight];
+#ifdef USEINT
+    memcpy(mpMap, pMap, mnWidth*mnHeight*sizeof(unsigned int));
+#else
+    int nn = mnWidth*mnHeight;
+    unsigned int* pDest = mpMap;
+    MAPDATATYPE* pSrc = pMap;
+    for (int i = 0; i < nn; i++) {
+        *pDest++ = *pSrc++;
     }
+#endif
     mnGridWidth = nGridWidth;
     mnGridHeight = nGridHeight;
-    mnPosX = nPosX - nGridWidth;
-    mnPosY = nPosY - nGridHeight;
+    mnPosX = nPosX;
+    mnPosY = nPosY;
+    mnFindeSz = 100;
+    mpFindResult = new Vec2[mnFindeSz];
 }
 
 AStarMap::~AStarMap() {
@@ -306,21 +345,123 @@ AStarMap::~AStarMap() {
     if (mpMap) {
         delete[] mpMap;
     }
+    if (mpFindResult) {
+        delete[] mpFindResult;
+    }
 }
 
 int AStarMap::_findPath(const int nStartX, const int nStartY, const int nTargetX, const int nTargetY) {
-    int nStartGridX = nStartX / mnGridWidth - 1;
-    int nStartGridY = nStartY / mnGridHeight - 1;
-    if (nStartGridX < 0)nStartGridX = 0;
-    if (nStartGridY < 0)nStartGridY = 0;
-    int nTargetGridX = nTargetX / mnGridWidth - 1;
-    int nTargetGridY = nTargetY / mnGridHeight - 1;
+    int nStartGridX = nStartX / mnGridWidth ;
+    int nStartGridY = nStartY / mnGridHeight ;
+    int nTargetGridX = nTargetX / mnGridWidth ;
+    int nTargetGridY = nTargetY / mnGridHeight ;
     return _findPathGrid(nStartGridX, nStartGridY, nTargetGridX, nTargetGridY);
 }
 
 int  AStarMap::_findPathGrid(const int nStartX, const int nStartY, const int nTargetX, const int nTargetY) {
-    int sx = nStartX + 1;
-    int sy = nStartY + 1;
-    int ex = nTargetX + 1;
-    int ey = nTargetY + 1;
+    int sx = nStartX ;
+    int sy = nStartY ;
+    int ex = nTargetX;
+    int ey = nTargetY;
+
+}
+
+/*
+* http://www.cnblogs.com/pheye/archive/2010/08/14/1799803.html
+*/
+bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, int& hitx, int& hity) {
+    int dx = x2 - x1; if (dx < 0) dx = -dx;
+    int dy = y2 - y1; if (dy < 0) dy = -dy;
+    int ux = ((dx > 0) << 1) - 1;//x的增量方向，取或-1
+    int uy = ((dy > 0) << 1) - 1;//y的增量方向，取或-1
+    int x = x1, y = y1, eps;//eps为累加误差
+
+    eps = 0;
+    if (dx > dy) {
+        for (x = x1; x != x2; x += ux) {
+            int grid = x + y*mnWidth;
+            if (mpMap[grid] == BLOCKV) {
+                hitx = x; hity = y;
+                return true;
+            }
+            eps += dy;
+            if ((eps << 1) >= dx) {
+                y += uy; eps -= dx;
+            }
+        }
+    }
+    else {
+        for (y = y1; y != y2; y += uy) {
+            int grid = x + y*mnWidth;
+            if (mpMap[grid] == BLOCKV) {
+                hitx = x; hity = y;
+                return true;
+            }
+            eps += dx;
+            if ((eps << 1) >= dy) {
+                x += ux; eps -= dy;
+            }
+        }
+    }
+    return false;
+}
+
+/*
+    TODO 是否要考虑起点，现在是不考虑的。
+    pPath按照起点到终点的顺序，但是不含起点。
+
+    问题：如果是斜着靠边走的话，由于画线算法和8个方向的走法可能不一致，可能会导致一直认为有碰撞的情况？ 应该不会吧
+*/
+void AStarMap::linearization(Vec2* pPath, int nNodeNum, int nMaxDist) {
+    if (nMaxDist < 0) nMaxDist = 10000;
+    //两个的直接忽略，认为没有碰撞。
+    if (nNodeNum <= 2) {
+        mnPathOutSz = 1;
+        mPathOut[0].x = mnTargetX;
+        mPathOut[0].y = mnTargetY;
+        return;
+    }
+
+    int maxn = nMaxDist < MAXOUTNUM ? nMaxDist : MAXOUTNUM;
+    //至少3个点。假设起点和第一个点在一条直线上，所以忽略起点。
+    mnOutBufferSz = 0;
+    int nNodeOutNum = 0;
+    int curx, cury;
+    int hitx, hity;
+    int lastx=pPath[0].x, lasty=pPath[0].y;//起点后的第一个点
+    for (int i = 1; i < nNodeNum && mnOutBufferSz < maxn; i++) {
+        curx = pPath[i].x;
+        cury = pPath[i].y;
+        if (_rayCast(lastx, lasty, curx, cury, hitx, hity)) {
+            //如果发生碰撞，说明应该取上一个点
+            Vec2& o = mPathOut[mnOutBufferSz++];
+            o.x = lastx; o.y = lasty;
+            //实际上应该是从lastx,lasty开始，但是这样可能导致一直不动，反正相邻两个一定可行，
+            //所以从curx,cury开始
+            lastx = curx;
+            lasty = cury;
+        }
+    }
+}
+
+void AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, int linedist) {
+    mnTargetX = edx;
+    mnTargetY = edy;
+    //转成格子
+    int sx = stx / mnGridWidth;
+    int sy = sty / mnGridHeight;
+    int ex = edx / mnGridWidth;
+    int ey = edy / mnGridHeight;
+    int hitx = 0, hity = 0;
+    if (!_rayCast(sx, sy, ex, ey, hitx, hity)) {
+        //注意不包含起点
+        mnPathOutSz = 1;
+        mPathOut[0].x = edx;
+        mPathOut[0].y = edy;
+        return;
+    }
+    //寻路
+    int pn = FindPath(sx, sy, ex, ey, mpMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindeSz * 2);
+    //直线化
+    linearization(mpFindResult, mnFindeSz, linedist);
 }

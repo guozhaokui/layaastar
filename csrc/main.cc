@@ -13,6 +13,8 @@ namespace laya {
     using v8::Value;
     using v8::ArrayBufferView;
     using v8::ArrayBuffer;
+    using v8::FunctionTemplate;
+    using v8::ObjectTemplate;
 
 #define GETARRAYBUFFER(o,arg) \
 if (args[arg]->IsArrayBuffer()) {\
@@ -135,10 +137,12 @@ return;\
         test();
     }
 
+
     void init(Local<Object> exports) {
         NODE_SET_METHOD(exports, "prefilter", _Prefilter);
         NODE_SET_METHOD(exports, "test1", _test1);
         NODE_SET_METHOD(exports, "testastar", _test2);
+        AStarMap::Init(exports);
     }
 
     //必须要有一个初始化函数。
