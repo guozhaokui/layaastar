@@ -15,6 +15,7 @@
 using v8::Context;
 using v8::Function;
 using v8::FunctionCallbackInfo;
+using v8::PropertyCallbackInfo;
 using v8::FunctionTemplate;
 using v8::Isolate;
 using v8::Local;
@@ -23,17 +24,74 @@ using v8::Object;
 using v8::Persistent;
 using v8::String;
 using v8::Value;
+using v8::ArrayBufferView;
+using v8::ArrayBuffer;
+
+#define GETARRAYBUFFER(o,arg) \
+if (args[arg]->IsArrayBuffer()) {\
+    o = Local<ArrayBuffer>::Cast(args[arg]);\
+}\
+else if (args[arg]->IsArrayBufferView()) {\
+    o= Local<ArrayBufferView>::Cast(args[arg])->Buffer();\
+}\
+else {\
+    printf("param %d error, need ArrayBuffer\n",arg);\
+    return;\
+}
+
+#define GETNUMBER(type,o,arg) \
+if (args[arg]->IsNumber()) {\
+    o = (type)(args[arg]->ToNumber(Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(Local<Number>())->Value());\
+}\
+else {\
+    printf("param ##arg## error: width {number}\n");\
+return;\
+}
+
 
 Persistent<Function> AStarMap::constructor;
 
 void js_findPath(const FunctionCallbackInfo<Value>& args) {
+    if (args.Length()<5){
+        printf("findPath 参数不够,要5个\n");
+        return;
+    }
     Isolate* isolate = args.GetIsolate();
-
     AStarMap* obj = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
-    //obj->value_ += 1;
+    int stx, sty, edx, edy;
+    GETNUMBER(int, stx, 0);
+    GETNUMBER(int, sty, 1);
+    GETNUMBER(int, edx, 2);
+    GETNUMBER(int, edy, 3);
+
+    Local<ArrayBuffer> jsUint32Buf_out;
+    GETARRAYBUFFER(jsUint32Buf_out, 4);
+    v8::ArrayBuffer::Contents pOutBuff = jsUint32Buf_out->GetContents();
+    int len = obj->findPath(stx, sty, edx, edy,(int*)pOutBuff.Data(), (int)pOutBuff.ByteLength());
 
     //设置返回值
-    //args.GetReturnValue().Set(Number::New(isolate, obj->value_));
+    args.GetReturnValue().Set(Number::New(isolate, len));
+}
+
+void js_SetFindRange(const FunctionCallbackInfo<Value>& args) {
+    Isolate* isolate = args.GetIsolate();
+    AStarMap* obj = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
+    int w = 10000;
+    GETNUMBER(int, w, 0);
+    int h = 10000;
+    GETNUMBER(int, h, 1);
+    obj->setFindRange(w, h);
+}
+
+void js_SetLinearizationLen(Local<String> property, Local<Value> value, const PropertyCallbackInfo<void> &info) {
+    AStarMap* obj = node::ObjectWrap::Unwrap<AStarMap>(info.This());
+    obj->mnLinearizationLen = value->Int32Value();
+}
+
+void js_GetLinearizationLen(Local<String> property, const PropertyCallbackInfo<Value> &info) {
+    Isolate *isolate = info.GetIsolate();
+    AStarMap* obj = node::ObjectWrap::Unwrap<AStarMap>(info.This());
+    info.GetReturnValue().Set(Number::New(isolate, obj->mnLinearizationLen));
 }
 
 void AStarMap::Init(Local<Object> exports) {
@@ -41,14 +99,17 @@ void AStarMap::Init(Local<Object> exports) {
 
     // Prepare constructor template
     Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-    tpl->SetClassName(String::NewFromUtf8(isolate, "MyObject"));
+    tpl->SetClassName(String::NewFromUtf8(isolate, "AStarMap"));
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
     // Prototype
     NODE_SET_PROTOTYPE_METHOD(tpl, "findPath", js_findPath);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "setFindRange", js_SetFindRange);
+    tpl->InstanceTemplate()->SetAccessor(String::NewFromUtf8(isolate, "linearizationLen"), 
+        js_GetLinearizationLen, js_SetLinearizationLen);
 
     constructor.Reset(isolate, tpl->GetFunction());
-    exports->Set(String::NewFromUtf8(isolate, "MyObject"), tpl->GetFunction());
+    exports->Set(String::NewFromUtf8(isolate, "AStarMap"), tpl->GetFunction());
 }
 
 void AStarMap::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -56,20 +117,37 @@ void AStarMap::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
     if (args.IsConstructCall()) {
         // Invoked as constructor: `new MyObject(...)`
-        printf("%d\n", args.Length);
-        //double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
-        const unsigned int* pMap;
-        int w;
-        int h;
-        int px;
-        int py;
-        int gw;
-        int gh;
-        AStarMap* obj = new AStarMap(pMap,w,h,px,py,gw,gh);    //TODO
-        obj->Wrap(args.This());
-        args.GetReturnValue().Set(args.This());
+        if (args.Length() >= 7) {
+            //double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
+            Local<ArrayBuffer> jsUint32Buf_map;
+            GETARRAYBUFFER(jsUint32Buf_map, 0);
+            v8::ArrayBuffer::Contents pMapBuff = jsUint32Buf_map->GetContents();
+            int ilen = (int)pMapBuff.ByteLength();
+            const unsigned int* pMap = (const unsigned int*)pMapBuff.Data();
+
+            int w;
+            GETNUMBER(int, w, 1);
+            int h;
+            GETNUMBER(int, h, 2);
+            int px;
+            GETNUMBER(int, px, 3);
+            int py;
+            GETNUMBER(int, py, 4);
+            int gw;
+            GETNUMBER(int, gw, 5);
+            int gh;
+            GETNUMBER(int, gh, 6);
+            AStarMap* obj = new AStarMap(pMap, w, h, px, py, gw, gh);
+
+            obj->Wrap(args.This());
+            args.GetReturnValue().Set(args.This());
+        }
+        else {
+            printf("AStarMap构造参数不对，应该是7个\n");
+        }
     }
     else {
+        printf("不支持直接调用这个函数。\n");
         /*
         // Invoked as plain function `MyObject(...)`, turn into construct call.
         const int argc = 1;
@@ -82,7 +160,6 @@ void AStarMap::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
         */
     }
 }
-
 
 MAPDATATYPE map[] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -319,43 +396,31 @@ AStarMap::AStarMap(const MAPDATATYPE* pMap, const int nMapWidth, const int nMapH
     
     mnWidth = nMapWidth;
     mnHeight = nMapHeight;
-    mpMap = new unsigned int[mnWidth*mnHeight];
-#ifdef USEINT
-    memcpy(mpMap, pMap, mnWidth*mnHeight*sizeof(unsigned int));
-#else
+    mpMap = new MapGrid[mnWidth*mnHeight];
     int nn = mnWidth*mnHeight;
-    unsigned int* pDest = mpMap;
-    MAPDATATYPE* pSrc = pMap;
+    MapGrid* pDest = mpMap;
+    const MAPDATATYPE* pSrc = pMap;
     for (int i = 0; i < nn; i++) {
-        *pDest++ = *pSrc++;
+        pDest->mapinfo = *pSrc++;
+        pDest->x = i%nMapWidth;
+        pDest->y = i/nMapWidth;
+        pDest++;
     }
-#endif
     mnGridWidth = nGridWidth;
     mnGridHeight = nGridHeight;
     mnPosX = nPosX;
     mnPosY = nPosY;
     mnFindeSz = 100;
-    mpFindResult = new Vec2[mnFindeSz];
+    mpFindResult = new int[mnFindeSz];
 }
 
 AStarMap::~AStarMap() {
-    if (mpOutBuffer) {
-        delete[] mpOutBuffer;
-    }
     if (mpMap) {
         delete[] mpMap;
     }
     if (mpFindResult) {
         delete[] mpFindResult;
     }
-}
-
-int AStarMap::_findPath(const int nStartX, const int nStartY, const int nTargetX, const int nTargetY) {
-    int nStartGridX = nStartX / mnGridWidth ;
-    int nStartGridY = nStartY / mnGridHeight ;
-    int nTargetGridX = nTargetX / mnGridWidth ;
-    int nTargetGridY = nTargetY / mnGridHeight ;
-    return _findPathGrid(nStartGridX, nStartGridY, nTargetGridX, nTargetGridY);
 }
 
 int  AStarMap::_findPathGrid(const int nStartX, const int nStartY, const int nTargetX, const int nTargetY) {
@@ -380,7 +445,7 @@ bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, 
     if (dx > dy) {
         for (x = x1; x != x2; x += ux) {
             int grid = x + y*mnWidth;
-            if (mpMap[grid] == BLOCKV) {
+            if (mpMap[grid].mapinfo == BLOCKV) {
                 hitx = x; hity = y;
                 return true;
             }
@@ -393,7 +458,7 @@ bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, 
     else {
         for (y = y1; y != y2; y += uy) {
             int grid = x + y*mnWidth;
-            if (mpMap[grid] == BLOCKV) {
+            if (mpMap[grid].mapinfo == BLOCKV) {
                 hitx = x; hity = y;
                 return true;
             }
@@ -412,29 +477,31 @@ bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, 
 
     问题：如果是斜着靠边走的话，由于画线算法和8个方向的走法可能不一致，可能会导致一直认为有碰撞的情况？ 应该不会吧
 */
-void AStarMap::linearization(Vec2* pPath, int nNodeNum, int nMaxDist) {
+int AStarMap::linearizationAndToPos(int* pPath, int nNodeNum, int nMaxDist, int* pOut, int nOutSZ) {
     if (nMaxDist < 0) nMaxDist = 10000;
     //两个的直接忽略，认为没有碰撞。
     if (nNodeNum <= 2) {
-        mnPathOutSz = 1;
-        mPathOut[0].x = mnTargetX;
-        mPathOut[0].y = mnTargetY;
-        return;
+        pOut[0] = mnTargetX;
+        pOut[1] = mnTargetY;
+        return 2;
     }
 
-    int maxn = nMaxDist < MAXOUTNUM ? nMaxDist : MAXOUTNUM;
+    int maxn = nMaxDist < nOutSZ/2 ? nMaxDist : nOutSZ/2;
     //至少3个点。假设起点和第一个点在一条直线上，所以忽略起点。
-    mnOutBufferSz = 0;
+    Vec2* pPathOut = (Vec2*)pOut;
+    int nOutNodeSz = 0;
     int nNodeOutNum = 0;
     int curx, cury;
     int hitx, hity;
-    int lastx=pPath[0].x, lasty=pPath[0].y;//起点后的第一个点
-    for (int i = 1; i < nNodeNum && mnOutBufferSz < maxn; i++) {
-        curx = pPath[i].x;
-        cury = pPath[i].y;
+    MapGrid* cgrid = mpMap+pPath[0];
+    int lastx= cgrid->x, lasty= cgrid->y;//起点后的第一个点
+    for (int i = 1; i < nNodeNum && nNodeOutNum < maxn; i++) {
+        MapGrid* pGrid = mpMap + pPath[i];
+        curx = pGrid->x;
+        cury = pGrid->y;
         if (_rayCast(lastx, lasty, curx, cury, hitx, hity)) {
             //如果发生碰撞，说明应该取上一个点
-            Vec2& o = mPathOut[mnOutBufferSz++];
+            Vec2& o = pPathOut[nNodeOutNum++];
             o.x = lastx; o.y = lasty;
             //实际上应该是从lastx,lasty开始，但是这样可能导致一直不动，反正相邻两个一定可行，
             //所以从curx,cury开始
@@ -442,9 +509,20 @@ void AStarMap::linearization(Vec2* pPath, int nNodeNum, int nMaxDist) {
             lasty = cury;
         }
     }
+    return nNodeOutNum * 2;
 }
 
-void AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, int linedist) {
+int AStarMap::findPath(int stx, int sty, int edx, int edy, int* pOut, int nOutSZ) {
+    return findPath(stx, sty, edx, edy, mnFindRangeX, mnFindRangeY, mnLinearizationLen, pOut, nOutSZ);
+}
+
+int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, 
+    int linedist, int* pOut, int nOutSZ) {
+    if (nOutSZ < 2) {
+        printf("findPath 提供的输出空间太小\n");
+        return 0;
+    }
+
     mnTargetX = edx;
     mnTargetY = edy;
     //转成格子
@@ -455,13 +533,12 @@ void AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int ma
     int hitx = 0, hity = 0;
     if (!_rayCast(sx, sy, ex, ey, hitx, hity)) {
         //注意不包含起点
-        mnPathOutSz = 1;
-        mPathOut[0].x = edx;
-        mPathOut[0].y = edy;
-        return;
+        pOut[0] = edx;
+        pOut[1] = edy;
+        return 2;
     }
     //寻路
-    int pn = FindPath(sx, sy, ex, ey, mpMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindeSz * 2);
+    //int pn = FindPath(sx, sy, ex, ey, mpMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindeSz);
     //直线化
-    linearization(mpFindResult, mnFindeSz, linedist);
+    //linearization(mpFindResult, pn, linedist, pOut, nOutSZ);
 }
