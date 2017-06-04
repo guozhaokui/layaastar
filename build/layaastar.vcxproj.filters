@@ -62,5 +62,8 @@
     <ClInclude Include="..\csrc\astar.h">
       <Filter>..\csrc</Filter>
     </ClInclude>
+    <ClInclude Include="..\csrc\v8args.h">
+      <Filter>..\csrc</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

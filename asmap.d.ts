@@ -8,7 +8,7 @@ export declare class AStarMap{
      * @param maxx {number} 最大范围x
      * @param maxy {number} 最大范围y
      */
-    setFindRange(maxx:number, maxy:number);
+    setSearchRegion(maxx:number, maxy:number);
     /**
      * 寻路。参数是实际位置，而不是格子。
      * 返回的也是实际节点。

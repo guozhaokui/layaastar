@@ -78,11 +78,19 @@ var mapdata = new Uint32Array([
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0     
 ]);
 
-
-var asmap = new astar.AStarMap(mapdata,60,60,0,0,128,128);
+/**@type {AStarMap} */
+var gridw=1;
+var gridh=1;
+var asmap = new astar.AStarMap(mapdata,60,60,0,0,gridw,gridh);
 
 var st = Date.now();
+var ob = new Uint32Array(1000);
+var num = asmap.findPath(24*gridw, 45*gridh, 7*gridw,6*gridh, ob);
 astar.testastar();
 var dt = Date.now()-st;
 
 console.log('tm='+dt);
+
+function testMemLeak(){
+    new astar.AStarMap();
+}
