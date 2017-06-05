@@ -41,7 +41,7 @@ public:
     AStarMap(const MAPDATATYPE* pMap, const int nMapWidth, const int nMapHeight, 
         int nPosX, int nPosY, int nGridWidth, int nGridHeight);
 
-    ~AStarMap();
+    virtual ~AStarMap();
 
     /**
      * Ñ°Â·¡£

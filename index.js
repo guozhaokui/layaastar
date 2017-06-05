@@ -94,9 +94,11 @@ function test(){
 
     console.log('tm='+dt);
 
-    function testMemLeak(){
-        new astar.AStarMap();
-    }
 }
 
-//test();
+function testMemLeak(){
+    setInterval(()=>{
+        var o = new astar.AStarMap(mapdata,60,60,0,0,1,1);
+    },10);
+}
+testMemLeak();

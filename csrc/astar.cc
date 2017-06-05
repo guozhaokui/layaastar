@@ -113,7 +113,7 @@ void AStarMap::New(const FunctionCallbackInfo<Value>& args) {
                 return;
             }
             AStarMap* obj = new AStarMap(pMap, w, h, px, py, gw, gh);
-
+            v8::Isolate::GetCurrent()->AdjustAmountOfExternalAllocatedMemory(w*h*sizeof(MapGrid)*3);
             obj->Wrap(args.This());
             args.GetReturnValue().Set(args.This());
         }
