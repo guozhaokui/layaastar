@@ -1,6 +1,6 @@
 {
   "name": "layaastar",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "用法\r ```\r pbrtools convhdr in.hdr out.png|out.raw\r ```",
   "main": "index.js",
   "scripts": {
