@@ -547,6 +547,6 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int max
     int pn = mnFindSz = FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
     //直线化
     int onum = linearizationAndToPos(mpFindResult, pn, linedist, pOut, nOutSZ);
-    saveAsTxt(sx,sy,ex,ey,pOut,onum);
+    //saveAsTxt(sx,sy,ex,ey,pOut,onum);
     return onum;
 }
