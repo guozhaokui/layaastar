@@ -12,9 +12,11 @@ struct Vec2 {
 };
 
 struct  MapGrid{
+    int     mapinfo;
+    unsigned short     cost;        //用short会快一点10ms/千次。但是限制大小最大为256x256
+    unsigned short     camefrom;    //用short会快一点10ms/千次。但是限制大小最大为256x256
     unsigned short x;
     unsigned short y;
-    int     mapinfo;
 };
 
 /**
@@ -103,6 +105,7 @@ protected:
     int*    mpFindResult = nullptr;
     int     mnFindResultCapacity = 0;
     int     mnFindSz = 0;
+    MapGrid* mpWorkMap = nullptr;
 //DEBUG
 public:
     MapGrid* mpMap = nullptr;

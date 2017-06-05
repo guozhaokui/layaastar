@@ -224,13 +224,14 @@ inline int Heuristic(const int nFromX, const int nFromY, const int nToX, const i
  * @param nOutBufferSize intbuffer的大小，实际大小是*4
 */
 int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSize,
-        int* const pOutBuffer, std::unordered_map<int, int>& CameFrom){
+        int* const pOutBuffer, MapGrid* pMap){
     std::vector<int> Path;
     int nCurrent = nTarget;
     Path.push_back(nCurrent);
 
     while (nCurrent != nStart){
-        nCurrent = CameFrom[nCurrent];
+        //nCurrent = CameFrom[nCurrent];
+        nCurrent = pMap[nCurrent].camefrom;
         Path.push_back(nCurrent);
     }
 
@@ -244,7 +245,7 @@ int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSiz
 }
 
 int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int nTargetY,
-        const MapGrid* pMap, const int nMapWidth, const int nMapHeight,
+        MapGrid* pMap, const int nMapWidth, const int nMapHeight,
         int* pOutBuffer, const int nOutBufferSize){
 
     if ((nStartX == nTargetX) && (nStartY == nTargetY)){
@@ -252,8 +253,8 @@ int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int 
     }
 
     std::priority_queue<IntPair, std::vector<IntPair>, std::greater<IntPair> > OpenSet;
-    std::unordered_map<int, int> CameFrom;  //用来倒着生成路径的，记录从哪个节点来的
-    std::unordered_map<int, int> Cost;      //每个节点到起点的实际距离。 对应wiki的 g_score[]
+    //std::unordered_map<int, int> CameFrom;  //用来倒着生成路径的，记录从哪个节点来的
+    //std::unordered_map<int, int> Cost;      //每个节点到起点的实际距离。 对应wiki的 g_score[]
 
     const int nStart = nStartX + nStartY*nMapWidth;
     const int nTarget = nTargetX + nTargetY*nMapWidth;
@@ -262,7 +263,8 @@ int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int 
         return 0;
 
     OpenSet.emplace(0, nStart);
-    Cost[nStart] = 0;
+    pMap[nStart].cost = 0;
+    //Cost[nStart] = 0;
 
     //static const int pMod[] = { -1, -1, 0,-1, 1,-1, -1,0, 1, 0, -1,1, 0,1, 1, 1}; // (x, y) pairs
     static const int pMod[] = { -1,0, 1,0, 0,-1, 0,1}; // (x, y) pairs
@@ -291,13 +293,17 @@ int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int 
                 (nNewY >= 0) && (nNewY < nMapHeight) && 
                 pMap[nNeighbour].mapinfo){
 
-                const int nNewCost = Cost[nCurrent] + 1;
-                //这里并没有使用closeset，因为如果遇到了closeset，一定满足nNewCost < Cost[nNeighbour]
-                if (Cost.find(nNeighbour) == Cost.end() || nNewCost < Cost[nNeighbour]){
+                //const int nNewCost = Cost[nCurrent] + 1;
+                const int nNewCost = pMap[nCurrent].cost + 1;
+                //这里并没有使用closeset，因为如果遇到了closeset，一定满足nNewCost > Cost[nNeighbour]
+                //if (Cost.find(nNeighbour) == Cost.end() || nNewCost < Cost[nNeighbour]){
+                if( nNewCost < pMap[nNeighbour].cost){
                     //计算f(n)
                     const int nPriority = nNewCost + Heuristic(nNewX, nNewY,nTargetX, nTargetY);
-                    CameFrom[nNeighbour] = nCurrent;
-                    Cost[nNeighbour] = nNewCost;
+                    //CameFrom[nNeighbour] = nCurrent;
+                    pMap[nNeighbour].camefrom = nCurrent;
+                    //Cost[nNeighbour] = nNewCost;
+                    pMap[nNeighbour].cost = nNewCost;
                     OpenSet.emplace(nPriority, nNeighbour);
                 }
             }
@@ -307,7 +313,7 @@ int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int 
     if (!bFound){
         return -1;
     }
-    return ReconstructPath(nStart, nTarget, nOutBufferSize, pOutBuffer, CameFrom);
+    return ReconstructPath(nStart, nTarget, nOutBufferSize, pOutBuffer, pMap);
 }
 
 void AStarMap::saveAsTxt(int stx, int sty, int edx, int edy, int* pOut, int nOutSz) {
@@ -391,14 +397,20 @@ AStarMap::AStarMap(const MAPDATATYPE* pMap, const int nMapWidth, const int nMapH
     mpMap = new MapGrid[mnWidth*mnHeight];
     MapGrid* pDest = mpMap;
     const MAPDATATYPE* pSrc = pMap;
+    //int maxcost = 0xffffff;
+    unsigned int maxcost = 0xffff;
 
     int nn = mnWidth*mnHeight;
     for (int i = 0; i < nn; i++) {
         pDest->mapinfo = *pSrc++;
         pDest->x = i%nMapWidth;
         pDest->y = i/nMapWidth;
+        pDest->cost = maxcost;
+        pDest->camefrom = 0;        //这个初始化值不会被用到
         pDest++;
     }
+
+    mpWorkMap = new MapGrid[mnWidth*mnHeight];
 
     mnGridWidth = nGridWidth;
     mnGridHeight = nGridHeight;
@@ -415,6 +427,9 @@ AStarMap::~AStarMap() {
     }
     if (mpFindResult) {
         delete[] mpFindResult;
+    }
+    if (mpWorkMap) {
+        delete[] mpWorkMap;
     }
 }
 
@@ -501,7 +516,8 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int* pOut, int nOutSZ
 }
 
 int AStarMap::findPathGrid(int sx, int sy, int ex, int ey) {
-    mnFindSz =  FindPath(sx, sy, ex, ey, mpMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
+    memcpy(mpWorkMap, mpMap, mnWidth*mnHeight*sizeof(MapGrid));
+    mnFindSz =  FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
     return mnFindSz;
 }
 
@@ -527,9 +543,10 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int max
         return 2;
     }
     //寻路
-    int pn = mnFindSz = FindPath(sx, sy, ex, ey, mpMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
+    memcpy(mpWorkMap, mpMap, mnWidth*mnHeight*sizeof(MapGrid));
+    int pn = mnFindSz = FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
     //直线化
     int onum = linearizationAndToPos(mpFindResult, pn, linedist, pOut, nOutSZ);
-    //saveAsTxt(sx,sy,ex,ey,pOut,onum);
+    saveAsTxt(sx,sy,ex,ey,pOut,onum);
     return onum;
 }
