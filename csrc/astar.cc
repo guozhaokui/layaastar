@@ -29,7 +29,7 @@ Persistent<Function> AStarMap::constructor;
 
 void js_findPath(const FunctionCallbackInfo<Value>& args) {
     if (args.Length()<5){
-        printf("findPath 参数不够,要5个\n");
+        printf("error: findPath need 5 params\n");
         return;
     }
     Isolate* isolate = args.GetIsolate();
@@ -109,7 +109,7 @@ void AStarMap::New(const FunctionCallbackInfo<Value>& args) {
             GETI32( gw, 5);
             GETI32( gh, 6);
             if (w*h * 4 > ilen) {
-                printf("map数据与width和height不符！\n");
+                printf("error: map size != width x height!\n");
                 return;
             }
             AStarMap* obj = new AStarMap(pMap, w, h, px, py, gw, gh);
@@ -118,11 +118,11 @@ void AStarMap::New(const FunctionCallbackInfo<Value>& args) {
             args.GetReturnValue().Set(args.This());
         }
         else {
-            printf("AStarMap构造参数不对，应该是7个\n");
+            printf("Error: AStarMap constructor need 7 params\n");
         }
     }
     else {
-        printf("不支持直接调用这个函数。\n");
+        printf("warn: not support call AStarMap function\n");
         /*
         // Invoked as plain function `MyObject(...)`, turn into construct call.
         const int argc = 1;
@@ -524,7 +524,7 @@ int AStarMap::findPathGrid(int sx, int sy, int ex, int ey) {
 int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, 
         int linedist, int* pOut, int nOutSZ) {
     if (nOutSZ < 2) {
-        printf("findPath 提供的输出空间太小\n");
+        printf("error: findPath pOut is too small \n");
         return 0;
     }
 

@@ -4,6 +4,8 @@ var fs = require('fs');
 var path = require('path');
 var astar= require('./build/Release/layaastar');
 
+exports.AStarMap = astar.AStarMap;
+
 var args = process.argv;
 
 /**
@@ -78,19 +80,23 @@ var mapdata = new Uint32Array([
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0     
 ]);
 
-/**@type {AStarMap} */
-var gridw=1;
-var gridh=1;
-var asmap = new astar.AStarMap(mapdata,60,60,0,0,gridw,gridh);
+function test(){
+    /**@type {AStarMap} */
+    var gridw=1;
+    var gridh=1;
+    var asmap = new astar.AStarMap(mapdata,60,60,0,0,gridw,gridh);
 
-var st = Date.now();
-var ob = new Uint32Array(1000);
-var num = asmap.findPath(24*gridw, 45*gridh, 7*gridw,6*gridh, ob);
-astar.testastar();
-var dt = Date.now()-st;
+    var st = Date.now();
+    var ob = new Uint32Array(1000);
+    var num = asmap.findPath(24*gridw, 45*gridh, 7*gridw,6*gridh, ob);
+    astar.testastar();
+    var dt = Date.now()-st;
 
-console.log('tm='+dt);
+    console.log('tm='+dt);
 
-function testMemLeak(){
-    new astar.AStarMap();
+    function testMemLeak(){
+        new astar.AStarMap();
+    }
 }
+
+//test();
