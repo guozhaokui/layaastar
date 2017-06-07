@@ -224,7 +224,7 @@ inline int Heuristic(const int nFromX, const int nFromY, const int nToX, const i
  * @param nOutBufferSize intbuffer的大小，实际大小是*4
 */
 int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSize,
-        int* const pOutBuffer, MapGrid* pMap){
+        int* const pOutBuffer, MapGrid* pMap,bool noStart){
     std::vector<int> Path;
     int nCurrent = nTarget;
     Path.push_back(nCurrent);
@@ -235,7 +235,7 @@ int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSiz
         Path.push_back(nCurrent);
     }
 
-    const int nPathLength = Path.size() - 1; // Excluding start node
+    const int nPathLength = Path.size() - (noStart?1:0); // Excluding start node
 
     for (int i = nPathLength - 1, j = 0; (i >= 0) && (j < nOutBufferSize); --i, ++j){
         pOutBuffer[j] = Path[i];
@@ -246,7 +246,7 @@ int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSiz
 
 int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int nTargetY,
         MapGrid* pMap, const int nMapWidth, const int nMapHeight,
-        int* pOutBuffer, const int nOutBufferSize){
+        int* pOutBuffer, const int nOutBufferSize, bool noStart){
 
     if ((nStartX == nTargetX) && (nStartY == nTargetY)){
         return 0;
@@ -313,7 +313,7 @@ int FindPath(const int nStartX, const int nStartY,const int nTargetX, const int 
     if (!bFound){
         return -1;
     }
-    return ReconstructPath(nStart, nTarget, nOutBufferSize, pOutBuffer, pMap);
+    return ReconstructPath(nStart, nTarget, nOutBufferSize, pOutBuffer, pMap, noStart);
 }
 
 void AStarMap::saveAsTxt(int stx, int sty, int edx, int edy, int* pOut, int nOutSz) {
@@ -433,6 +433,30 @@ AStarMap::~AStarMap() {
     }
 }
 
+//检查当前格子的某个方向的格子是否可行
+inline bool CheckDir(MapGrid* pCur, int dx, int dy) {
+    //一共有8种组合。
+    if (dx > 0) {
+        if (dy > 0) {
+//    @
+//  @ x          
+        }
+        else if (dy == 0) {
+//   x
+            pCur + 1;
+        }
+        else {
+
+        }
+    }
+    else if (dx == 0) {
+
+    }
+    else {
+
+    }
+}
+
 /*
 * http://www.cnblogs.com/pheye/archive/2010/08/14/1799803.html
 */
@@ -445,20 +469,24 @@ bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, 
     if (dx < 0) dx = -dx;
     if (dy < 0) dy = -dy;
     eps = 0;
-    if (dx > dy) {
+    int cdy = 0;
+    if (dx > dy) {//水平方向为主。x每次一格
         for (x = x1; x != x2; x += ux) {
             int grid = x + y*mnWidth;
-            if (mpMap[grid].mapinfo == BLOCKV) {
+            MapGrid* pCur = mpMap + grid;
+            if (pCur->mapinfo == BLOCKV) {
                 hitx = x; hity = y;
                 return true;
             }
             eps += dy;
             if ((eps << 1) >= dx) {
                 y += uy; eps -= dx;
+                cdy = uy;
             }
+            //CheckDir(pCur,ux,cdy)
         }
     }
-    else {
+    else {//垂直方向为主。y每次一格
         for (y = y1; y != y2; y += uy) {
             int grid = x + y*mnWidth;
             if (mpMap[grid].mapinfo == BLOCKV) {
@@ -484,13 +512,16 @@ int AStarMap::linearizationAndToPos(int* pPath, int nNodeNum, int nMaxDist, int*
     }
 
     int maxn = nMaxDist < nOutSZ/2 ? nMaxDist : nOutSZ/2;
-    //至少3个点。假设起点和第一个点在一条直线上，所以忽略起点。
+    //至少3个点。起点不可忽略，因为在格子很大的情况下，起点就会很重要，例如可能正好在拐点上
+    //      ****E
+    //      S###
+
     Vec2* pPathOut = (Vec2*)pOut;
     int nNodeOutNum = 0;
     int curx, cury;
     int hitx, hity;
     MapGrid* cgrid = mpMap+pPath[0];
-    int lastx= cgrid->x, lasty= cgrid->y;//起点后的第一个点
+    int lastx= cgrid->x, lasty= cgrid->y;//起点
     for (int i = 1; i < nNodeNum && nNodeOutNum < maxn; i++) {
         MapGrid* pGrid = mpMap + pPath[i];
         curx = pGrid->x;
@@ -517,7 +548,7 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int* pOut, int nOutSZ
 
 int AStarMap::findPathGrid(int sx, int sy, int ex, int ey) {
     memcpy(mpWorkMap, mpMap, mnWidth*mnHeight*sizeof(MapGrid));
-    mnFindSz =  FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
+    mnFindSz =  FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity,false);
     return mnFindSz;
 }
 
@@ -544,7 +575,8 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int max
     }
     //寻路
     memcpy(mpWorkMap, mpMap, mnWidth*mnHeight*sizeof(MapGrid));
-    int pn = mnFindSz = FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity);
+    int pn = mnFindSz = FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, 
+        (int*)mpFindResult, mnFindResultCapacity, false);
     //直线化
     int onum = linearizationAndToPos(mpFindResult, pn, linedist, pOut, nOutSZ);
     //saveAsTxt(sx,sy,ex,ey,pOut,onum);

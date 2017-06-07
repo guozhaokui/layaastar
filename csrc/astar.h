@@ -13,18 +13,18 @@ struct Vec2 {
 
 struct  MapGrid{
     int     mapinfo;
-    unsigned short     cost;        //ÓÃshort»á¿ìÒ»µã10ms/Ç§´Î¡£µ«ÊÇÏŞÖÆ´óĞ¡×î´óÎª256x256
-    unsigned short     camefrom;    //ÓÃshort»á¿ìÒ»µã10ms/Ç§´Î¡£µ«ÊÇÏŞÖÆ´óĞ¡×î´óÎª256x256
+    unsigned short     cost;        //ç”¨shortä¼šå¿«ä¸€ç‚¹10ms/åƒæ¬¡ã€‚ä½†æ˜¯é™åˆ¶å¤§å°æœ€å¤§ä¸º256x256
+    unsigned short     camefrom;    //ç”¨shortä¼šå¿«ä¸€ç‚¹10ms/åƒæ¬¡ã€‚ä½†æ˜¯é™åˆ¶å¤§å°æœ€å¤§ä¸º256x256
     unsigned short x;
     unsigned short y;
 };
 
 /**
- *@param nOutBufferSize pOutBufferµÄ´óĞ¡£¬ÊÇlength£¬²»ÊÇbyteLength
+ *@param nOutBufferSize pOutBufferçš„å¤§å°ï¼Œæ˜¯lengthï¼Œä¸æ˜¯byteLength
 */
 int FindPath(const int nStartX, const int nStartY, const int nTargetX, const int nTargetY,
     const MapGrid* pMap, const int nMapWidth, const int nMapHeight,
-    int* pOutBuffer, const int nOutBufferSize);
+    int* pOutBuffer, const int nOutBufferSize,bool noStart);
 
 void test();
 
@@ -32,7 +32,7 @@ void test();
 */
 class AStarMap :public node::ObjectWrap{
 public:
-    //V8 µ¼³ö
+    //V8 å¯¼å‡º
     static void Init(v8::Local<v8::Object> exports);
     static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
     static v8::Persistent<v8::Function> constructor;
@@ -44,49 +44,49 @@ public:
     virtual ~AStarMap();
 
     /**
-     * Ñ°Â·¡£
-     * @param stx,sty ÆğµãÎ»ÖÃ¡£²»ÊÇ¸ñ×Ó
-     * @param edx,edy Ä¿±êµãÎ»ÖÃ£¬²»ÊÇ¸ñ×Ó¡£
-     * @param maxwidth ×î´óx¾àÀë
-     * @param maxheight ×î´óy¾àÀë
-     * @param linedist Ö±Ïß»¯¾àÀë¡£¶ÔÕâÃ´³¤µÄ¸ñ×Ó½øĞĞÖ±Ïß»¯¡£·µ»ØÕâÃ´³¤µÄÂ·¾¶µÄÖ±Ïß»¯½Úµã¡£
-     * @param pOut Êä³ö½Úµã£¬Ã¿Á½¸ö±íÊ¾Ò»¸öÎ»ÖÃ
-     * @param nOutSZ Êä³öbufferµÄ´óĞ¡£¬ÓÃÀ´·ÀÖ¹bufferÒç³ö
-     * @return pOutµÄ³¤¶È¡£ÀıÈçÓĞÁ½¸ö½Úµã£¬Ôò³¤¶ÈÎª4
+     * å¯»è·¯ã€‚
+     * @param stx,sty èµ·ç‚¹ä½ç½®ã€‚ä¸æ˜¯æ ¼å­
+     * @param edx,edy ç›®æ ‡ç‚¹ä½ç½®ï¼Œä¸æ˜¯æ ¼å­ã€‚
+     * @param maxwidth æœ€å¤§xè·ç¦»
+     * @param maxheight æœ€å¤§yè·ç¦»
+     * @param linedist ç›´çº¿åŒ–è·ç¦»ã€‚å¯¹è¿™ä¹ˆé•¿çš„æ ¼å­è¿›è¡Œç›´çº¿åŒ–ã€‚è¿”å›è¿™ä¹ˆé•¿çš„è·¯å¾„çš„ç›´çº¿åŒ–èŠ‚ç‚¹ã€‚
+     * @param pOut è¾“å‡ºèŠ‚ç‚¹ï¼Œæ¯ä¸¤ä¸ªè¡¨ç¤ºä¸€ä¸ªä½ç½®
+     * @param nOutSZ è¾“å‡ºbufferçš„å¤§å°ï¼Œç”¨æ¥é˜²æ­¢bufferæº¢å‡º
+     * @return pOutçš„é•¿åº¦ã€‚ä¾‹å¦‚æœ‰ä¸¤ä¸ªèŠ‚ç‚¹ï¼Œåˆ™é•¿åº¦ä¸º4
     */
     int findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, int linedist, 
         int* pOut, int nOutSZ);
     int findPath(int stx, int sty, int edx, int edy, int* pOut, int nOutSZ);
 
     /*
-    * ÉèÖÃ×î´óÑ°Â··¶Î§¡£µ¥Î»²»ÊÇ¸ñ×Ó¡£
+    * è®¾ç½®æœ€å¤§å¯»è·¯èŒƒå›´ã€‚å•ä½ä¸æ˜¯æ ¼å­ã€‚
     */
     void setSearchRegion(int w, int h) {
         mnSearchRegionW = w/mnGridWidth;
         mnSearchRegionH = h/mnGridHeight;
     };
 
-    //µ÷ÊÔÓÃ
+    //è°ƒè¯•ç”¨
     int findPathGrid(int sx, int sy, int ex, int ey);
     void saveAsTxt(int stx, int sty, int edx, int edy, int* pOut, int nOutSz);
 protected:
 
     /**
-     * Ö±Ïß¼ì²â¡£
-     * @param x1 ÆğÊ¼¸ñ×Ó
-     * @param x2 Ä¿±ê¸ñ×Ó
-     * @param hitx Åö×²µÄÎ»ÖÃ
-     * @return {bool} ÊÇ·ñ·¢ÉúÅö×²¡£falseµÄ»°£¬hitx£¬hityÎŞÒâÒå¡£
+     * ç›´çº¿æ£€æµ‹ã€‚
+     * @param x1 èµ·å§‹æ ¼å­
+     * @param x2 ç›®æ ‡æ ¼å­
+     * @param hitx ç¢°æ’çš„ä½ç½®
+     * @return {bool} æ˜¯å¦å‘ç”Ÿç¢°æ’ã€‚falseçš„è¯ï¼Œhitxï¼Œhityæ— æ„ä¹‰ã€‚
     */
     bool _rayCast(const int x1, const int y1, const int x2, const int y2, int& hitx, int& hity);
 
     /**
-    * Ö±Ïß»¯½á¹û¡£ 
-    * ·µ»ØÊÇpOutµÄ³¤¶È
-    * TODO ÊÇ·ñÒª¿¼ÂÇÆğµã£¬ÏÖÔÚÊÇ²»¿¼ÂÇµÄ¡£
-    * pPath°´ÕÕÆğµãµ½ÖÕµãµÄË³Ğò£¬µ«ÊÇ²»º¬Æğµã¡£
+    * ç›´çº¿åŒ–ç»“æœã€‚ 
+    * è¿”å›æ˜¯pOutçš„é•¿åº¦
+    * TODO æ˜¯å¦è¦è€ƒè™‘èµ·ç‚¹ï¼Œç°åœ¨æ˜¯ä¸è€ƒè™‘çš„ã€‚
+    * pPathæŒ‰ç…§èµ·ç‚¹åˆ°ç»ˆç‚¹çš„é¡ºåºï¼Œä½†æ˜¯ä¸å«èµ·ç‚¹ã€‚
     *
-    * ÎÊÌâ£ºÈç¹ûÊÇĞ±×Å¿¿±ß×ßµÄ»°£¬ÓÉÓÚ»­ÏßËã·¨ºÍ8¸ö·½ÏòµÄ×ß·¨¿ÉÄÜ²»Ò»ÖÂ£¬¿ÉÄÜ»áµ¼ÖÂÒ»Ö±ÈÏÎªÓĞÅö×²µÄÇé¿ö£¿ Ó¦¸Ã²»»á°É
+    * é—®é¢˜ï¼šå¦‚æœæ˜¯æ–œç€é è¾¹èµ°çš„è¯ï¼Œç”±äºç”»çº¿ç®—æ³•å’Œ8ä¸ªæ–¹å‘çš„èµ°æ³•å¯èƒ½ä¸ä¸€è‡´ï¼Œå¯èƒ½ä¼šå¯¼è‡´ä¸€ç›´è®¤ä¸ºæœ‰ç¢°æ’çš„æƒ…å†µï¼Ÿ åº”è¯¥ä¸ä¼šå§
     */
     int linearizationAndToPos(int* pPath,int nNodeNum, int nMaxDist, int* pOut, int nOutSZ);
 
@@ -99,9 +99,9 @@ protected:
     //int   mnStartY = 0;
     int     mnTargetX = 0;
     int     mnTargetY = 0;
-    int     mnSearchRegionW = 10000;       //×î´óÑ°Â·¾àÀë¿í£¬³¬¹ıÕâ¸ö¾ÍËã²»¿ÉĞĞ¡£µ¥Î»ÊÇ¸ñ×Ó¡£
-    int     mnSearchRegionH = 10000;       //×î´óÑ°Â·¾àÀë¸ß£¬³¬¹ıÕâ¸ö¾ÍËã²»¿ÉĞĞ¡£µ¥Î»ÊÇ¸ñ×Ó¡£
-    //±£´æ½á¹û¸ñ×Ó
+    int     mnSearchRegionW = 10000;       //æœ€å¤§å¯»è·¯è·ç¦»å®½ï¼Œè¶…è¿‡è¿™ä¸ªå°±ç®—ä¸å¯è¡Œã€‚å•ä½æ˜¯æ ¼å­ã€‚
+    int     mnSearchRegionH = 10000;       //æœ€å¤§å¯»è·¯è·ç¦»é«˜ï¼Œè¶…è¿‡è¿™ä¸ªå°±ç®—ä¸å¯è¡Œã€‚å•ä½æ˜¯æ ¼å­ã€‚
+    //ä¿å­˜ç»“æœæ ¼å­
     int*    mpFindResult = nullptr;
     int     mnFindResultCapacity = 0;
     int     mnFindSz = 0;
@@ -112,7 +112,7 @@ public:
 public:
     int     mnWidth = 0;
     int     mnHeight = 0;
-    int     mnLinearizationLen = 10000; //×î´óÖ±Ïß»¯¾àÀë¡£µ¥Î»ÊÇ¸ñ×Ó
+    int     mnLinearizationLen = 10000; //æœ€å¤§ç›´çº¿åŒ–è·ç¦»ã€‚å•ä½æ˜¯æ ¼å­
 };
 
 #endif
