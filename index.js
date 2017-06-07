@@ -101,4 +101,35 @@ function testMemLeak(){
         var o = new astar.AStarMap(mapdata,60,60,0,0,1,1);
     },10);
 }
-testMemLeak();
+//testMemLeak();
+
+function test1(){
+    let gridw=1;
+    let gridh=1;
+    let mapdata = new Uint32Array(60*60);
+    mapdata.forEach((v,i)=>{mapdata[i]=1;});
+    /**
+     * 
+     * @param {number} x 
+     * @param {number} y 
+     */
+    function getp(x,y){return y*60+x;}
+    let block=[
+        [33,40], [34,40], [35,40], 
+        [33,41], [34,41], [35,41], 
+        [33,42], [34,42], [35,42], 
+        [33,43], [34,43], [35,43] 
+    ];
+    block.forEach((v)=>{
+        mapdata[getp(v[0],v[1])]=0;
+    });
+    let asmap = new astar.AStarMap(mapdata,60,60,0,0,gridw,gridh);
+    let outbuf = new Uint32Array(1000);
+    let outlen = 0;
+    outlen = asmap.findPath(32*gridw, 40*gridh, 36*gridw,40*gridh, outbuf);
+    for( var i=0; i<outlen/2; i++){
+        console.log(outbuf[i*2],outbuf[i*2+1]);
+    }
+}
+
+test1();
