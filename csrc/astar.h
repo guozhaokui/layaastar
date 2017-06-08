@@ -81,6 +81,10 @@ protected:
     bool _rayCast(const int x1, const int y1, const int x2, const int y2, int& hitx, int& hity);
 
     /**
+     * 检查当前格子和他的某个方向的格子是否有障碍
+    */
+    bool _CheckDir(MapGrid* pCur, int dx, int dy);
+    /**
     * 直线化结果。 
     * 返回是pOut的长度
     * TODO 是否要考虑起点，现在是不考虑的。

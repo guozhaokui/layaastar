@@ -27,7 +27,9 @@ return;\
 if (args[arg]->IsInt32()) {\
     o =  args[arg]->Int32Value();\
 }\
-else {\
+else if(args[arg]->IsNumber()){\
+    o = (int)(args[arg]->ToNumber()->Value());\
+}else {\
     printf("param ##arg## error: width {number}\n");\
 return;\
 }

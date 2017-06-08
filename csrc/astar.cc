@@ -433,28 +433,71 @@ AStarMap::~AStarMap() {
     }
 }
 
-//检查当前格子的某个方向的格子是否可行
-inline bool CheckDir(MapGrid* pCur, int dx, int dy) {
+inline bool AStarMap::_CheckDir(MapGrid* pCur, int dx, int dy) {
+    //当前的。
+    if (pCur->mapinfo == BLOCKV) {
+        return true;
+    }
+        
+    //下一步的可能性。
     //一共有8种组合。
     if (dx > 0) {
         if (dy > 0) {
-//    @
+//  c @
 //  @ x          
+            return (pCur + 1)->mapinfo == BLOCKV ||
+                (pCur + mnWidth)->mapinfo == BLOCKV ||
+                (pCur + mnWidth + 1)->mapinfo == BLOCKV;
         }
         else if (dy == 0) {
-//   x
-            pCur + 1;
+//   c x
+            return (pCur + 1)->mapinfo == BLOCKV;
         }
-        else {
-
+        else {//dy<0
+//   @ x
+//   c @
+            return (pCur + 1)->mapinfo == BLOCKV ||
+                (pCur - mnWidth)->mapinfo == BLOCKV ||
+                (pCur - mnWidth + 1)->mapinfo == BLOCKV;
         }
     }
     else if (dx == 0) {
+        if (dy > 0) {
+//c 
+//x
+            return (pCur + mnWidth)->mapinfo == BLOCKV;
+        }
+        else if (dy == 0) {
+            return false;
+        }
+        else {
+//x
+//c
+            return (pCur - mnWidth)->mapinfo == BLOCKV;
 
+        }
     }
-    else {
-
+    else {//dx<0
+        if (dy > 0) {
+//x @
+//@ c
+            return (pCur - 1)->mapinfo == BLOCKV ||
+                (pCur - mnWidth)->mapinfo == BLOCKV ||
+                (pCur - mnWidth - 1)->mapinfo == BLOCKV;
+        }
+        else if (dy == 0) {
+//x c   
+            return (pCur - 1)->mapinfo == BLOCKV;
+        }
+        else {
+//@ c
+//x @
+            return (pCur - 1)->mapinfo == BLOCKV ||
+                (pCur + mnWidth)->mapinfo == BLOCKV ||
+                (pCur + mnWidth - 1)->mapinfo == BLOCKV;
+        }
     }
+    return false;
 }
 
 /*
@@ -470,32 +513,40 @@ bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, 
     if (dy < 0) dy = -dy;
     eps = 0;
     int cdy = 0;
+    int cdx = 0;
     if (dx > dy) {//水平方向为主。x每次一格
         for (x = x1; x != x2; x += ux) {
+            int grid = x + y*mnWidth;
+            MapGrid* pCur = mpMap + grid;
+            eps += dy;
+            if ((eps << 1) >= dx) {
+                y += uy; eps -= dx;
+                cdy = uy;
+            }
+            if (_CheckDir(pCur, ux, cdy)) {
+                hitx = x;
+                hity = y;
+                return true;
+            }
+        }
+    }
+    else {//垂直方向为主。y每次一格
+        for (y = y1; y != y2; y += uy) {
             int grid = x + y*mnWidth;
             MapGrid* pCur = mpMap + grid;
             if (pCur->mapinfo == BLOCKV) {
                 hitx = x; hity = y;
                 return true;
             }
-            eps += dy;
-            if ((eps << 1) >= dx) {
-                y += uy; eps -= dx;
-                cdy = uy;
-            }
-            //CheckDir(pCur,ux,cdy)
-        }
-    }
-    else {//垂直方向为主。y每次一格
-        for (y = y1; y != y2; y += uy) {
-            int grid = x + y*mnWidth;
-            if (mpMap[grid].mapinfo == BLOCKV) {
-                hitx = x; hity = y;
-                return true;
-            }
             eps += dx;
             if ((eps << 1) >= dy) {
                 x += ux; eps -= dy;
+                cdx = ux;
+            }
+            if (_CheckDir(pCur, cdx, uy)) {
+                hitx = x;
+                hity = y;
+                return true;
             }
         }
     }
@@ -531,8 +582,8 @@ int AStarMap::linearizationAndToPos(int* pPath, int nNodeNum, int nMaxDist, int*
             MapGrid* pLastGrid = mpMap + pPath[i-1];
             Vec2& o = pPathOut[nNodeOutNum++];
             //转成实际位置并记录
-            o.x = pLastGrid->x*mnGridWidth+mnPosX;
-            o.y = pLastGrid->y*mnGridHeight+mnPosY;
+            o.x = pLastGrid->x*mnGridWidth+mnPosX+mnGridWidth/2;
+            o.y = pLastGrid->y*mnGridHeight+mnPosY+mnGridHeight/2;
             //实际上应该是从lastx,lasty开始，但是这样可能导致一直不动，反正相邻两个一定可行，
             //所以从curx,cury开始
             lastx = pLastGrid->x;

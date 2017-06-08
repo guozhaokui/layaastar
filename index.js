@@ -88,11 +88,16 @@ function test(){
 
     var st = Date.now();
     var ob = new Uint32Array(1000);
-    var num = asmap.findPath(24*gridw, 45*gridh, 7*gridw,6*gridh, ob);
-    astar.testastar();
+    let num=0;
+    for( let i=0; i<10000; i++){
+        num = asmap.findPath(24*gridw, 45*gridh, 7*gridw,6*gridh, ob);
+    }
+    //astar.testastar();
     var dt = Date.now()-st;
-
     console.log('tm='+dt);
+    for( let i=0; i<num/2; i++){
+        console.log(ob[i*2],ob[i*2+1]);
+    }
 
 }
 
@@ -132,4 +137,25 @@ function test1(){
     }
 }
 
-test1();
+
+function test2(){
+    /**@type {AStarMap} */
+    var gridw=64;
+    var gridh=64;
+    var asmap = new astar.AStarMap(  new Uint32Array( eval(fs.readFileSync('map2.txt','utf8'))) ,120,120,0,0,gridw,gridh);
+
+    var st = Date.now();
+    var ob = new Uint32Array(1000);
+    let num=0;
+    num = asmap.findPath(5912.914316290177, 2459.7755433869424, 6080,1542, ob);
+    var dt = Date.now()-st;
+    console.log('tm='+dt);
+    for( let i=0; i<num/2; i++){
+        console.log(ob[i*2],ob[i*2+1]);
+    }
+
+}
+//test2();
+test();
+
+
