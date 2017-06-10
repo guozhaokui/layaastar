@@ -121,7 +121,7 @@ function test1(){
     function getp(x,y){return y*60+x;}
     let block=[
         [33,40], [34,40], [35,40], 
-        [33,41], [34,41], [35,41], 
+        [33,41], /*[34,41],*/ [35,41], 
         [33,42], [34,42], [35,42], 
         [33,43], [34,43], [35,43] 
     ];
@@ -129,9 +129,19 @@ function test1(){
         mapdata[getp(v[0],v[1])]=0;
     });
     let asmap = new astar.AStarMap(mapdata,60,60,0,0,gridw,gridh);
+    asmap.setSaveFindeResult(0);
     let outbuf = new Uint32Array(1000);
     let outlen = 0;
-    outlen = asmap.findPath(32*gridw, 40*gridh, 36*gridw,40*gridh, outbuf);
+    //outlen = asmap.findPath(32*gridw, 40*gridh, 36*gridw,40*gridh, outbuf);
+    outlen = asmap.findPath(35,39,33,44 , outbuf);
+    if(outlen==0){
+        console.log('畅通');
+    }
+    else if(outlen==-1){
+        console.log('起点有问题');
+    }else if(outlen==-3){
+        console.log('寻路失败，目标不可达');
+    }
     for( var i=0; i<outlen/2; i++){
         console.log(outbuf[i*2],outbuf[i*2+1]);
     }
@@ -147,15 +157,17 @@ function test2(){
     var st = Date.now();
     var ob = new Uint32Array(1000);
     let num=0;
-    num = asmap.findPath(5912.914316290177, 2459.7755433869424, 6080,1542, ob);
+    for(let i=0; i<10000; i++){
+        //num = asmap.findPath(Math.floor(36.1+Math.random()),Math.floor(77+Math.random()), Math.floor(35),Math.floor(69), ob);
+    }
+    num = asmap.findPath(4351.660549496342, 3393.2553409498564, 4320, 3424 , ob);
     var dt = Date.now()-st;
     console.log('tm='+dt);
     for( let i=0; i<num/2; i++){
         console.log(ob[i*2],ob[i*2+1]);
     }
-
 }
 //test2();
-test();
+test1();
 
 

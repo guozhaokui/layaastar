@@ -64,6 +64,14 @@ void js_SetLinearizationLen(Local<String> property, Local<Value> value,
     pMap->mnLinearizationLen = value->Int32Value();
 }
 
+void js_SetSaveFindResult(const FunctionCallbackInfo<Value>& args) {
+    Isolate* isolate = args.GetIsolate();
+    AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
+    int isave = 0;
+    GETI32(isave, 0);
+    pMap->setSaveFindResult(isave != 0);
+}
+
 void js_GetLinearizationLen(Local<String> property, const PropertyCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(info.This());
@@ -81,6 +89,7 @@ void AStarMap::Init(Local<Object> exports) {
     // Prototype
     NODE_SET_PROTOTYPE_METHOD(tpl, "findPath", js_findPath);
     NODE_SET_PROTOTYPE_METHOD(tpl, "setSearchRegion", js_SetFindRange);
+    NODE_SET_PROTOTYPE_METHOD(tpl, "setSaveFindeResult", js_SetSaveFindResult);
     tpl->InstanceTemplate()->SetAccessor(String::NewFromUtf8(isolate, "linearizationLen"), 
         js_GetLinearizationLen, js_SetLinearizationLen);
 
@@ -220,8 +229,9 @@ inline int Heuristic(const int nFromX, const int nFromY, const int nToX, const i
 }
 
 /**
- * 根据来源构建路径。注意去掉了起点。
+ * 根据来源构建路径。
  * @param nOutBufferSize intbuffer的大小，实际大小是*4
+ * @param noStart 如果为true，就是忽略起点。终点始终有，注意终点是基于格子的。
 */
 int ReconstructPath(const int nStart, const int nTarget, const int nOutBufferSize,
         int* const pOutBuffer, MapGrid* pMap,bool noStart){
@@ -479,22 +489,22 @@ inline bool AStarMap::_CheckDir(MapGrid* pCur, int dx, int dy) {
     }
     else {//dx<0
         if (dy > 0) {
-//x @
 //@ c
+//x @
             return (pCur - 1)->mapinfo == BLOCKV ||
-                (pCur - mnWidth)->mapinfo == BLOCKV ||
-                (pCur - mnWidth - 1)->mapinfo == BLOCKV;
+                (pCur + mnWidth)->mapinfo == BLOCKV ||
+                (pCur + mnWidth - 1)->mapinfo == BLOCKV;
         }
         else if (dy == 0) {
 //x c   
             return (pCur - 1)->mapinfo == BLOCKV;
         }
         else {
-//@ c
 //x @
+//@ c
             return (pCur - 1)->mapinfo == BLOCKV ||
-                (pCur + mnWidth)->mapinfo == BLOCKV ||
-                (pCur + mnWidth - 1)->mapinfo == BLOCKV;
+                (pCur - mnWidth)->mapinfo == BLOCKV ||
+                (pCur - mnWidth - 1)->mapinfo == BLOCKV;
         }
     }
     return false;
@@ -553,20 +563,29 @@ bool AStarMap::_rayCast(const int x1, const int y1, const int x2, const int y2, 
     return false;
 }
 
+/*
+ 这个
+*/
 int AStarMap::linearizationAndToPos(int* pPath, int nNodeNum, int nMaxDist, int* pOut, int nOutSZ) {
     if (nMaxDist < 0) nMaxDist = 10000;
+    if (nNodeNum <= 1){
+        //这个只有寻路返回0的时候才会满足，例如起点和终点在一个格子内
+        return 0;
+    }
     //两个的直接忽略，认为没有碰撞。
+    //两个可能也会碰撞，所以不忽略了
+    /*
     if (nNodeNum <= 2) {
         pOut[0] = mnTargetX;
         pOut[1] = mnTargetY;
         return 2;
     }
-
+    */
     int maxn = nMaxDist < nOutSZ/2 ? nMaxDist : nOutSZ/2;
-    //至少3个点。起点不可忽略，因为在格子很大的情况下，起点就会很重要，例如可能正好在拐点上
+    //至少2个点。起点不可忽略，因为在格子很大的情况下，起点就会很重要，例如可能正好在拐点上
     //      ****E
     //      S###
-
+    // 如果只有两个点，或者在一条直线上，则会返回0
     Vec2* pPathOut = (Vec2*)pOut;
     int nNodeOutNum = 0;
     int curx, cury;
@@ -618,18 +637,35 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int max
     int ex = edx / mnGridWidth;
     int ey = edy / mnGridHeight;
     int hitx = 0, hity = 0;
+    //如果起点不可行，返回-1
+    int grid = sx + sy*mnWidth;
+    MapGrid* pCur = mpMap + grid;
+    if (pCur->mapinfo == BLOCKV) {
+        return -1;
+    }
+    //如果终点不可行，返回-2，需要外面重新找点
+    //TODO 可以先直线找到第一个碰撞点，
+    if ((mpMap + ex + ey*mnWidth)->mapinfo == BLOCKV) {
+        return -2;
+    }
+
+    //如果直线检测都没有碰撞
     if (!_rayCast(sx, sy, ex, ey, hitx, hity)) {
         //注意不包含起点
-        pOut[0] = edx;
-        pOut[1] = edy;
-        return 2;
+        return 0;
     }
     //寻路
     memcpy(mpWorkMap, mpMap, mnWidth*mnHeight*sizeof(MapGrid));
     int pn = mnFindSz = FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, 
         (int*)mpFindResult, mnFindResultCapacity, false);
+    //如果寻路失败
+    if (pn == -1) {
+        return -3;
+    }
     //直线化
     int onum = linearizationAndToPos(mpFindResult, pn, linedist, pOut, nOutSZ);
-    //saveAsTxt(sx,sy,ex,ey,pOut,onum);
+    if (mbSaveFindResult) {
+        saveAsTxt(sx, sy, ex, ey, pOut, onum);
+    }
     return onum;
 }

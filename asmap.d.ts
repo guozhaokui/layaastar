@@ -30,8 +30,19 @@ export declare class AStarMap{
     setSearchRegion(maxx:number, maxy:number);
 
     /**
+     * 是否把中间结果保存到一个文件中（d:/temp/map.txt）用于调试。
+     * @param b {number} 0表示不保存，其他表示保存
+     */
+    setSaveFindeResult(b:number):void;
+
+    /**
      * 寻路。注意所有的参数都是是实际位置，而不是格子。
      * 返回的也是节点的实际位置。
+     * 返回结果不含起点和终点。
+     * 返回0 表示起点到终点可以直达。起点和终点都在一个格子内也是这种情况。
+     * 返回-1 表示起点不可达，无法计算
+     * 返回-2 表示终点不可达，即终点本身就在不可达区域
+     * 返回-3 表示无法找到路径。例如终点在封死的区域
      * 
      * @param stx   {number} 起点x。是实际位置，不是格子
      * @param sty   {number} 起点y。是实际位置，不是格子

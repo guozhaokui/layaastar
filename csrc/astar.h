@@ -52,12 +52,14 @@ public:
      * @param linedist 直线化距离。对这么长的格子进行直线化。返回这么长的路径的直线化节点。
      * @param pOut 输出节点，每两个表示一个位置
      * @param nOutSZ 输出buffer的大小，用来防止buffer溢出
-     * @return pOut的长度。例如有两个节点，则长度为4
+     * @return pOut的长度。例如有两个节点，则长度为4。 如果为0，则表示当前点就不可行
     */
     int findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, int linedist, 
         int* pOut, int nOutSZ);
     int findPath(int stx, int sty, int edx, int edy, int* pOut, int nOutSZ);
 
+    //查找
+    bool lineHit(int stx, int sty, int edx, int edy, int& hitx, int &hity);
     /*
     * 设置最大寻路范围。单位不是格子。
     */
@@ -68,7 +70,12 @@ public:
 
     //调试用
     int findPathGrid(int sx, int sy, int ex, int ey);
+
     void saveAsTxt(int stx, int sty, int edx, int edy, int* pOut, int nOutSz);
+
+    void setSaveFindResult(bool b) {
+        mbSaveFindResult = b;
+    }
 protected:
 
     /**
@@ -110,6 +117,7 @@ protected:
     int     mnFindResultCapacity = 0;
     int     mnFindSz = 0;
     MapGrid* mpWorkMap = nullptr;
+    bool    mbSaveFindResult = false;   //是否把寻路结果保存到 d:/temp/map.txt中
 //DEBUG
 public:
     MapGrid* mpMap = nullptr;
