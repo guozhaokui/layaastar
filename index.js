@@ -133,7 +133,7 @@ function test1(){
     let outbuf = new Uint32Array(1000);
     let outlen = 0;
     //outlen = asmap.findPath(32*gridw, 40*gridh, 36*gridw,40*gridh, outbuf);
-    outlen = asmap.findPath(35,39,33,44 , outbuf);
+    outlen = asmap.findPath(36,41 ,31,40, outbuf);
     if(outlen==0){
         console.log('畅通');
     }
@@ -158,16 +158,16 @@ function test2(){
     var ob = new Uint32Array(1000);
     let num=0;
     for(let i=0; i<10000; i++){
-        //num = asmap.findPath(Math.floor(36.1+Math.random()),Math.floor(77+Math.random()), Math.floor(35),Math.floor(69), ob);
+        num = asmap.findPath(Math.floor(36.1+Math.random()),Math.floor(77+Math.random()), Math.floor(35),Math.floor(69), ob);
     }
-    num = asmap.findPath(4351.660549496342, 3393.2553409498564, 4320, 3424 , ob);
+    //num = asmap.findPath(4351.660549496342, 3393.2553409498564, 4320, 3424 , ob);
     var dt = Date.now()-st;
     console.log('tm='+dt);
     for( let i=0; i<num/2; i++){
         console.log(ob[i*2],ob[i*2+1]);
     }
 }
-//test2();
-test1();
+test2();
+//test1();
 
 
