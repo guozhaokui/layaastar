@@ -150,24 +150,78 @@ function test1(){
 
 function test2(){
     /**@type {AStarMap} */
-    var gridw=64;
-    var gridh=64;
+    var gridw=1;
+    var gridh=1;
     var asmap = new astar.AStarMap(  new Uint32Array( eval(fs.readFileSync('map2.txt','utf8'))) ,120,120,0,0,gridw,gridh);
-
+    asmap.setSaveFindeResult(1);    
     var st = Date.now();
     var ob = new Uint32Array(1000);
     let num=0;
     for(let i=0; i<10000; i++){
-        num = asmap.findPath(Math.floor(36.1+Math.random()),Math.floor(77+Math.random()), Math.floor(35),Math.floor(69), ob);
+    //    num = asmap.findPath(Math.floor(36.1+Math.random()),Math.floor(77+Math.random()), Math.floor(35),Math.floor(69), ob);
     }
     //num = asmap.findPath(4351.660549496342, 3393.2553409498564, 4320, 3424 , ob);
+    console.log(6080/64,1542/64, 4219.269462902295/64,3000.4444330281876/64);
+    num = asmap.findPath(6080/64,1542/64, 4219.269462902295/64,3000.4444330281876/64, ob);
     var dt = Date.now()-st;
     console.log('tm='+dt);
     for( let i=0; i<num/2; i++){
         console.log(ob[i*2],ob[i*2+1]);
     }
 }
-test2();
+
+/**
+ * 直接读取地图的json
+ */
+function test3(){
+    /**@type {AStarMap} */
+    var gridw=1;
+    var gridh=1;
+    let mapdata = JSON.parse(fs.readFileSync('mapdata.json','utf8'));
+    let baselayer = mapdata.layers.find((val)=>{
+        return (val.name==='baseLayer');
+    });
+    let mapblock = [];
+    let mapw=0;
+    let maph=0;
+    let trans={0:1,676:2,673:5,675:3,674:4,691:6};
+    let cango=[false,true,false,true,true,true,false,true];
+    if(baselayer){
+        /**@type {number[]} */
+        let dt = baselayer.data;
+        dt.forEach((v,i)=>{
+            if(cango[trans[v]])mapblock.push(1);
+            else mapblock.push(0);
+            /*
+            if(v===691 || v===676) mapblock.push(0);
+            else mapblock.push(1);
+            */
+        });
+        let w =mapw= baselayer.width;
+        let h =maph= baselayer.height;
+        if(w*h!=mapblock.length){
+            throw 'error size'+(w*h)+','+mapblock.length;
+        }
+    }
+    var asmap = new astar.AStarMap(  new Uint32Array( mapblock ) ,mapw,maph,0,0,gridw,gridh);
+
+    asmap.setSaveFindeResult(1);    
+    var ob = new Uint32Array(1000);
+    //起始点: 3978.57,2978.64
+    //终点: 4703,2739
+    let stx = 4064/64; 
+    let sty = 2976/64;
+    let edx = 4703/64;
+    let edy = 2739/64;
+    console.log(stx,sty,edx ,edy);
+    let num = asmap.findPath(stx,sty, edx,edy, ob);
+    console.log(num);
+    for( let i=0; i<num/2; i++){
+        console.log(ob[i*2],ob[i*2+1]);
+    }
+}
+test3();
+//test2();
 //test1();
 
 

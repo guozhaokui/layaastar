@@ -641,16 +641,25 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int max
     int grid = sx + sy*mnWidth;
     MapGrid* pCur = mpMap + grid;
     if (pCur->mapinfo == BLOCKV) {
+        if (mbSaveFindResult) {
+            saveAsTxt(sx, sy, ex, ey, nullptr, 0);        
+        }
         return -1;
     }
     //如果终点不可行，返回-2，需要外面重新找点
     //TODO 可以先直线找到第一个碰撞点，
     if ((mpMap + ex + ey*mnWidth)->mapinfo == BLOCKV) {
+        if (mbSaveFindResult) {
+            saveAsTxt(sx, sy, ex, ey, nullptr, 0);        
+        }
         return -2;
     }
 
     //如果直线检测都没有碰撞
     if (!_rayCast(sx, sy, ex, ey, hitx, hity)) {
+        if (mbSaveFindResult) {
+            saveAsTxt(sx, sy, ex, ey, nullptr, 0);        
+        }
         //注意不包含起点
         return 0;
     }
