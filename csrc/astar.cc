@@ -636,6 +636,12 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int max
     int sy = sty / mnGridHeight;
     int ex = edx / mnGridWidth;
     int ey = edy / mnGridHeight;
+
+    if(sx>=mnWidth)sx=mnWidth-1;  if(sx<0)sx=0;
+    if(sy>=mnHeight)sy=mnHeight-1;if(sy<0)sy=0;
+    if(ex>=mnWidth)ex=mnWidth-1;  if(ex<0)ex=0;
+    if(ey>=mnHeight)ey=mnHeight-1;if(ey<0)ey=0;
+
     int hitx = 0, hity = 0;
     //如果起点不可行，返回-1
     int grid = sx + sy*mnWidth;
