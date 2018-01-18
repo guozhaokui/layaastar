@@ -16,6 +16,7 @@ namespace laya {
     using v8::ArrayBuffer;
     using v8::FunctionTemplate;
     using v8::ObjectTemplate;
+    #define VERSION 1
 
     void _test2(const FunctionCallbackInfo<Value>& args) {
         test();
@@ -23,6 +24,7 @@ namespace laya {
 
 
     void init(Local<Object> exports) {
+        printf("LayaAStar Version:%d\n", VERSION);
         NODE_SET_METHOD(exports, "testastar", _test2);
         AStarMap::Init(exports);
     }
