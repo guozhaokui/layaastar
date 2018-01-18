@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <functional>
 #include "v8args.h"
+#include <memory>
 
 #define BLOCKV 0 //不可行区域
 #define VALIDV 1 //可行区域
