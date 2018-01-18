@@ -226,6 +226,7 @@ function test4(){
     var gridw=128;
     var gridh=128;
     var asmap = new astar.AStarMap(mapdata,60,60,0,0,gridw,gridh);
+    console.log('ver='+astar.getVersion());
     
     asmap.findPath(0,0,128*60-1,128*60-1, new Uint32Array(1000));
 }

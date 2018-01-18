@@ -16,16 +16,19 @@ namespace laya {
     using v8::ArrayBuffer;
     using v8::FunctionTemplate;
     using v8::ObjectTemplate;
-    #define VERSION 1
+    #define VERSION 201801182
 
     void _test2(const FunctionCallbackInfo<Value>& args) {
         test();
     }
-
+    void _getVersion(const FunctionCallbackInfo<Value>& args) {
+        args.GetReturnValue().Set(VERSION);
+    }
 
     void init(Local<Object> exports) {
         printf("LayaAStar Version:%d\n", VERSION);
         NODE_SET_METHOD(exports, "testastar", _test2);
+        NODE_SET_METHOD(exports, "getVersion", _getVersion);
         AStarMap::Init(exports);
     }
 
