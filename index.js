@@ -230,7 +230,13 @@ function test4(){
     
     asmap.findPath(0,0,128*60-1,128*60-1, new Uint32Array(1000));
 }
-test4();
+function test5(){
+    var asmap = new astar.AStarMap(new ArrayBuffer(100),null,11111,1,1,1,1.3);
+    console.log(asmap);
+    var res = asmap.findPath(0,0,128*60-1,128*60-1, new ArrayBuffer(12));
+    console.log(res);
+}
+test3();
 //test2();
 //test1();
 

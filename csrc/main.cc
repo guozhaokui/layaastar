@@ -16,7 +16,7 @@ namespace laya {
     using v8::ArrayBuffer;
     using v8::FunctionTemplate;
     using v8::ObjectTemplate;
-    #define VERSION 201801182
+    #define VERSION 201801261
 
     void _test2(const FunctionCallbackInfo<Value>& args) {
         test();

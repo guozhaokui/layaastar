@@ -34,8 +34,17 @@ void js_findPath(const FunctionCallbackInfo<Value>& args) {
         return;
     }
     Isolate* isolate = args.GetIsolate();
+    if (!isolate) {
+        printf("Error:js findpath no v8::isolate \n");
+        return;
+    }
     AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
-    int stx, sty, edx, edy;
+    if (!pMap) {
+        printf("Error:findpath error, no c obj in this object\n");
+        return;
+    }
+    bool bParamError = false;
+    int stx=0, sty=0, edx=0, edy=0;
     GETI32( stx, 0);
     GETI32( sty, 1);
     GETI32( edx, 2);
@@ -44,7 +53,12 @@ void js_findPath(const FunctionCallbackInfo<Value>& args) {
     Local<ArrayBuffer> jsUint32Buf_out;
     GETARRAYBUFFER(jsUint32Buf_out, 4);
     ArrayBuffer::Contents pOutBuff = jsUint32Buf_out->GetContents();
-    int len = pMap->findPath(stx, sty, edx, edy,(int*)pOutBuff.Data(), (int)pOutBuff.ByteLength()/4);
+    int i32len = (int)pOutBuff.ByteLength() / 4;
+    if (i32len <= 1) {
+        printf("js_findPath error :result buffer too small\n");
+        return;
+    }
+    int len = pMap->findPath(stx, sty, edx, edy,(int*)pOutBuff.Data(), i32len);
 
     //设置返回值
     args.GetReturnValue().Set(Number::New(isolate, len));
@@ -53,7 +67,12 @@ void js_findPath(const FunctionCallbackInfo<Value>& args) {
 void js_SetFindRange(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = args.GetIsolate();
     AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
+    if (!pMap) {
+        printf("Error:setFindRange c obj=NULL\n");
+        return;
+    }
     int w = 10000,h=10000;
+    bool bParamError = false;
     GETI32(w, 0);
     GETI32(h, 1);
     pMap->setSearchRegion(w, h);
@@ -62,12 +81,21 @@ void js_SetFindRange(const FunctionCallbackInfo<Value>& args) {
 void js_SetLinearizationLen(Local<String> property, Local<Value> value, 
         const PropertyCallbackInfo<void> &info) {
     AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(info.This());
+    if (!pMap) {
+        printf("Error: js_SetLinearizationLen no c obj\n");
+        return;
+    }
     pMap->mnLinearizationLen = value->Int32Value();
 }
 
 void js_SetSaveFindResult(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = args.GetIsolate();
     AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(args.Holder());
+    if (!pMap) {
+        printf("Error:js_SetSaveFindResult no c obj\n");
+        return;
+    }
+    bool bParamError = false;
     int isave = 0;
     GETI32(isave, 0);
     pMap->setSaveFindResult(isave != 0);
@@ -76,11 +104,19 @@ void js_SetSaveFindResult(const FunctionCallbackInfo<Value>& args) {
 void js_GetLinearizationLen(Local<String> property, const PropertyCallbackInfo<Value> &info) {
     Isolate *isolate = info.GetIsolate();
     AStarMap* pMap = node::ObjectWrap::Unwrap<AStarMap>(info.This());
+    if (!pMap) {
+        printf("Error:js_GetLinearizationLen no c obj\n");
+        return;
+    }
     info.GetReturnValue().Set(Number::New(isolate, pMap->mnLinearizationLen));
 }
 
 void AStarMap::Init(Local<Object> exports) {
     Isolate* isolate = exports->GetIsolate();
+    if (!isolate) {
+        printf("get v8::isolate error!");
+        return;
+    }
 
     // Prepare constructor template
     Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
@@ -102,14 +138,35 @@ void AStarMap::New(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = args.GetIsolate();
 
     if (args.IsConstructCall()) {
+        bool bParamError = false;
         // Invoked as constructor: `new MyObject(...)`
         if (args.Length() >= 7) {
             //double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
             Local<ArrayBuffer> jsUint32Buf_map;
-            GETARRAYBUFFER(jsUint32Buf_map, 0);
+            if (args[0]->IsArrayBuffer()) {
+                jsUint32Buf_map = Local<ArrayBuffer>::Cast(args[0]); 
+            }
+            else if (args[0]->IsArrayBufferView()) {
+                jsUint32Buf_map = Local<ArrayBufferView>::Cast(args[0])->Buffer(); 
+            }else{
+                printf("AStarMap construct error: param %d error, need ArrayBuffer\n", 0); 
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
+                return; 
+            }
+            //GETARRAYBUFFER(jsUint32Buf_map, 0);
             v8::ArrayBuffer::Contents pMapBuff = jsUint32Buf_map->GetContents();
             int ilen = (int)pMapBuff.ByteLength();
+            if (ilen <= 0) {
+                printf("AStarMap construct error: mapbuffer lenth=%d\n", ilen);
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
+                return;
+            }
             const unsigned int* pMap = (const unsigned int*)pMapBuff.Data();
+            if (!pMap) {
+                printf("AStarMap construct error: mapbuffer=null\n");
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
+                return;
+            }
 
             int w,h,px,py,gw,gh;
             GETI32( w, 1);
@@ -118,8 +175,23 @@ void AStarMap::New(const FunctionCallbackInfo<Value>& args) {
             GETI32( py, 4);
             GETI32( gw, 5);
             GETI32( gh, 6);
+            if (bParamError) {
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
+                return;
+            }
+            if (w*h <= 0 || w*h > 100 * 1024 * 1024) {
+                printf("AStarMap construct error: w*h=%d\n",w*h);
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
+                return;
+            }
             if (w*h * 4 > ilen) {
-                printf("error: map size != width x height!\n");
+                printf("AStarMap construct error: map size != width x height!\n");
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
+                return;
+            }
+            if (gw <= 0 || gh <= 0) {
+                printf("AStarMap construct error: grid size error w=%d,h=%d\n", gw, gh);
+                args.This()->SetAlignedPointerInInternalField(0, nullptr);
                 return;
             }
             AStarMap* obj = new AStarMap(pMap, w, h, px, py, gw, gh);
@@ -406,6 +478,10 @@ AStarMap::AStarMap(const MAPDATATYPE* pMap, const int nMapWidth, const int nMapH
     mnWidth = nMapWidth;
     mnHeight = nMapHeight;
     mpMap = new MapGrid[mnWidth*mnHeight];
+    if (!mpMap) {
+        printf("new mapgrid obj error\n");
+        return;
+    }
     MapGrid* pDest = mpMap;
     const MAPDATATYPE* pSrc = pMap;
     //int maxcost = 0xffffff;
@@ -618,6 +694,8 @@ int AStarMap::findPath(int stx, int sty, int edx, int edy, int* pOut, int nOutSZ
 }
 
 int AStarMap::findPathGrid(int sx, int sy, int ex, int ey) {
+    if(!mpMap)//没有初始化成功
+       return -100;
     memcpy(mpWorkMap, mpMap, mnWidth*mnHeight*sizeof(MapGrid));
     mnFindSz =  FindPath(sx, sy, ex, ey, mpWorkMap, mnWidth, mnHeight, (int*)mpFindResult, mnFindResultCapacity,false);
     return mnFindSz;
@@ -625,6 +703,8 @@ int AStarMap::findPathGrid(int sx, int sy, int ex, int ey) {
 
 int AStarMap::findPath(int stx, int sty, int edx, int edy, int maxwidth, int maxheight, 
         int linedist, int* pOut, int nOutSZ) {
+    if(!mpMap)//没有初始化成功
+       return -100;
     if (nOutSZ < 2) {
         printf("error: findPath pOut is too small \n");
         return 0;

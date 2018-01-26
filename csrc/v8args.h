@@ -11,6 +11,7 @@ else if (args[arg]->IsArrayBufferView()) {\
 }\
 else {\
     printf("param %d error, need ArrayBuffer\n",arg);\
+    bParamError=true;\
     return;\
 }
 
@@ -19,8 +20,8 @@ if (args[arg]->IsNumber()) {\
     o = (type)(args[arg]->ToNumber()->Value());\
 }\
 else {\
-    printf("param ##arg## error: width {number}\n");\
-return;\
+    printf("param %d error: need {number}\n",arg);\
+bParamError=true;\
 }
 
 #define GETI32(o,arg) \
@@ -30,8 +31,8 @@ if (args[arg]->IsInt32()) {\
 else if(args[arg]->IsNumber()){\
     o = (int)(args[arg]->ToNumber()->Value());\
 }else {\
-    printf("param ##arg## error: width {number}\n");\
-return;\
+    printf("param %d error: need {number}\n",arg);\
+bParamError=true;\
 }
 
 
